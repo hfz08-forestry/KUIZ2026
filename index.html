@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kuiz MHM FORTRAIN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0284c7; --primary-dark: #0369a1; --primary-light: #e0f2fe;
+            --text-main: #0f172a; --text-sub: #475569; --border: #cbd5e1;
+            --bg-body: #f8fafc; --radius: 14px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: #e2e8f0; display: flex; justify-content: center; min-height: 100vh; }
+        .phone-frame { width: 100%; max-width: 440px; background-color: var(--bg-body); min-height: 100vh; display: flex; flex-direction: column; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.12); overflow-x: hidden; }
+        
+        .app-header { background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%); color: white; padding: 22px 20px 26px; text-align: center; border-radius: 0 0 22px 22px; }
+        .app-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+        .app-header p { font-size: 15px; color: #bae6fd; margin-top: 4px; }
+        
+        .main-screen { flex: 1; padding: 18px; display: flex; flex-direction: column; overflow-y: auto; margin-top: -12px; }
+        .card { background: white; border-radius: var(--radius); border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); margin-bottom: 16px; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .screen { display: none; }
+        .screen.active { display: flex; flex-direction: column; }
+
+        .form-group label { display: block; font-size: 18px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 13px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 18px; font-weight: 600; background-color: #f8fafc; outline: none; margin-bottom: 16px; }
+        .form-group input:focus { background: white; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); }
+        
+        .btn-action { width: 100%; padding: 14px; background: var(--primary); color: white; font-size: 18px; font-weight: 800; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2); transition: background 0.2s; }
+        .btn-action:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        
+        .score-board { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 18px; border-radius: 10px; border: 1px solid #e2e8f0; font-weight: 700; color: #334155; margin-bottom: 14px; font-size: 15px; }
+        .score-val { color: var(--primary); font-weight: 800; font-size: 18px; }
+        
+        .topik-badge { display: inline-block; background: #fef08a; color: #854d0e; font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 9999px; margin-bottom: 10px; text-transform: uppercase; }
+        .soalan-box { background: #f8fafc; padding: 16px; border-radius: 10px; border-left: 4px solid var(--primary); margin-bottom: 16px; font-size: 17px; color: #0f172a; font-weight: 600; line-height: 1.55; }
+        
+        .pilihan-btn { padding: 13px 15px; background: white; border: 2px solid #e2e8f0; border-radius: 10px; text-align: left; font-size: 18px; font-weight: 600; color: #334155; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .pilihan-btn.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+        .pilihan-opt-badge { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: #f1f5f9; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #64748b; border: 1px solid #cbd5e1; flex-shrink: 0; }
+        .pilihan-btn.selected .pilihan-opt-badge { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        /* Loading Overlay */
+        .loading-overlay { display:none; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:100; justify-content:center; align-items:center; flex-direction:column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom:15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Review styling */
+        .review-item { background:#f8fafc; border:1px solid #e2e8f0; padding:12px; border-radius:8px; margin-bottom:12px; }
+        .review-item.correct { border-left:4px solid #16a34a; }
+        .review-item.wrong { border-left:4px solid #dc2626; }
+    </style>
+</head>
+<body>
+
+<div class="phone-frame">
+    <header class="app-header">
+        <h1>KUIZ ASAS MATEMATIK 1</h1>
+        <p>Berdasarkan Kertas Soalan FORTRAIN</p>
+    </header>
+
+    <div class="loading-overlay" id="loader">
+        <div class="spinner"></div>
+        <div style="font-weight:700; color:#334155; font-size:16px;" id="loader-text">Sila tunggu sebentar...</div>
+    </div>
+
+    <main class="main-screen">
+        <!-- LOGIN -->
+        <div id="screen-login" class="screen active">
+            <div class="card">
+                <h2 style="font-size: 20px; color: var(--primary-dark); margin-bottom: 12px; text-align:center;">Pendaftaran Calon</h2>
+                <div id="pesanan-nasihat" style="background:#f0fdf4; border:1px solid #bbf7d0; padding:12px; border-radius:8px; margin-bottom:20px; font-size:14px; color:#166534; line-height:1.6; text-align:center;"></div>
+                
+                <div class="form-group">
+                    <label>Nama Penuh:</label>
+                    <input type="text" id="input-nama" placeholder="Contoh: Ali Bin Abu" required>
+                    <label>Nombor Badan:</label>
+                    <input type="text" id="input-id" placeholder="Contoh: PH36/C01/PT" required>
+                </div>
+                <button class="btn-action" onclick="mulaUjian()">MULA KUIZ SEKARANG ➔</button>
+            </div>
+        </div>
+
+        <!-- KUIZ -->
+        <div id="screen-quiz" class="screen">
+            <div class="score-board" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <div style="flex:1; min-width:100px;">Pelatih: <b id="bar-nama"></b></div>
+                <div>Masa: <span id="q-timer" style="color:#ef4444; font-weight:800; background:#fee2e2; padding:2px 8px; border-radius:6px;">30:00</span></div>
+                <div>Soalan: <span class="score-val" id="q-counter"></span></div>
+            </div>
+            <div class="card">
+                <span class="topik-badge" id="q-topik">Topik</span>
+                <div class="soalan-box" id="q-text"></div>
+                <div id="pilihan-box"></div>
+                <button class="btn-action" id="btn-next" onclick="jawabSeterusnya()" disabled>SETERUSNYA ➔</button>
+            </div>
+        </div>
+
+        <!-- KEPUTUSAN -->
+        <div id="screen-result" class="screen">
+            <div class="card" style="text-align:center;">
+                <div style="font-size: 50px; margin: 10px 0;">🏆</div>
+                <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 4px;">Ujian Selesai!</h2>
+                <p style="font-size: 15px; color: #64748b; margin-bottom: 16px;" id="res-pelatih-info"></p>
+
+                <div style="background: #f0fdf4; border: 2px solid #86efac; padding: 16px; border-radius: 12px; margin-bottom: 18px;">
+                    <div style="font-size: 18px; font-weight: 700; color: #166534;">Markah Anda:</div>
+                    <div style="font-size: 38px; font-weight: 800; color: #166534;" id="res-score"></div>
+                    <div style="font-size: 15px; font-weight: 700; color: #047857;" id="res-pct"></div>
+                </div>
+
+                <button class="btn-action" onclick="hantarDataKeSheet()" style="background:#0284c7; margin-bottom:10px;">HANTAR MARKAH KE SISTEM</button>
+            </div>
+        </div>
+
+        <!-- BERJAYA -->
+        <div id="screen-success" class="screen">
+            <div class="card" style="text-align:center; padding: 30px 20px;">
+                <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
+                <h2 style="font-size: 22px; color: #0f172a; margin-bottom: 10px;">Penghantaran Berjaya!</h2>
+                <p style="font-size: 15px; color: #64748b; line-height: 1.6; margin-bottom:20px;">Terima kasih <b id="display-nama"></b>.<br>Markah anda telah berjaya direkodkan ke sistem pengajar.</p>
+                
+                <button class="btn-action" onclick="tunjukSemakan()" style="background:#15803d; margin-bottom:10px;">SEMAK JAWAPAN & JALAN KIRA ▾</button>
+                <button class="btn-action" onclick="location.reload()" style="background: #e2e8f0; color:#334155; box-shadow:none;">KEMBALI KE MUKA DEPAN</button>
+            </div>
+            <!-- Container for Semakan -->
+            <div id="review-container" style="display:none; text-align:left;"></div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    const senaraiPesanan = [
+        "<b>Selamat Maju Jaya! 🌟</b><br>Sila jawab dengan teliti dan jujur. Ujian ini menguji kefahaman anda sebelum amali di lapangan. Percaya pada diri sendiri!",
+        "<b>Semoga Berjaya! 💪</b><br>Buktikan kefahaman anda. Tarik nafas panjang, bertenang dan jawab dengan yakin.",
+        "<b>Goodluck! 🎯</b><br>Sila baca soalan betul-betul. Ingat kembali formula dan teknik yang diajar dalam kelas sebelum ini.",
+        "<b>Fokus dan Yakin! ✨</b><br>Anda pasti boleh buat yang terbaik. Jangan gopoh, tunjukkan kehebatan anda mengira.",
+        "<b>Buat Sehabis Baik! 🚀</b><br>Anggap ujian ini sebagai latihan persediaan ke lapangan yang sebenar. Kejayaan bermula dari sini!"
+    ];
+    
+    window.onload = function() {
+        const randomMsg = senaraiPesanan[Math.floor(Math.random() * senaraiPesanan.length)];
+        const pesananElement = document.getElementById('pesanan-nasihat');
+        if (pesananElement) {
+            pesananElement.innerHTML = randomMsg;
+        }
+    };
+
+    const bankKategori = {"Asas & Penukaran Unit": [[{"soalan": "Tukarkan 0.85 km kepada meter (m).", "pilihan": ["85 m", "850 m", "8.5 m", "8500 m"], "jawapan": 1, "penerangan": "0.85 x 1000 = 850"}, {"soalan": "Tukarkan 1.25 km kepada meter (m).", "pilihan": ["125 m", "1250 m", "12.5 m", "12500 m"], "jawapan": 1, "penerangan": "1.25 x 1000 = 1250"}, {"soalan": "Tukarkan 0.05 km kepada meter (m).", "pilihan": ["5 m", "50 m", "500 m", "5000 m"], "jawapan": 1, "penerangan": "0.05 x 1000 = 50"}], [{"soalan": "Tulis 'Lapan belas ribu tujuh belas' dalam bentuk nombor.", "pilihan": ["18,170", "18,017", "18,700", "80,017"], "jawapan": 1, "penerangan": "18,000 + 17 = 18,017"}, {"soalan": "Tulis 'Tiga puluh dua ribu lapan' dalam bentuk nombor.", "pilihan": ["32,800", "32,008", "32,080", "30,208"], "jawapan": 1, "penerangan": "32,000 + 8 = 32,008"}, {"soalan": "Tulis 'Lima belas ribu seratus tiga' dalam bentuk nombor.", "pilihan": ["15,013", "15,103", "15,301", "50,103"], "jawapan": 1, "penerangan": "15,000 + 103 = 15,103"}], [{"soalan": "Selesaikan 25.2 cm + 1.5 m. Berikan jawapan dalam mm.", "pilihan": ["1752 mm", "175.2 mm", "26.7 mm", "17520 mm"], "jawapan": 0, "penerangan": "252 mm + 1500 mm = 1752 mm"}, {"soalan": "Selesaikan 12.5 cm + 2.1 m. Berikan jawapan dalam mm.", "pilihan": ["2225 mm", "222.5 mm", "14.6 mm", "22250 mm"], "jawapan": 0, "penerangan": "125 mm + 2100 mm = 2225 mm"}, {"soalan": "Selesaikan 8.4 cm + 0.9 m. Berikan jawapan dalam mm.", "pilihan": ["984 mm", "98.4 mm", "9.3 mm", "9840 mm"], "jawapan": 0, "penerangan": "84 mm + 900 mm = 984 mm"}]], "Pecahan & Perpuluhan": [[{"soalan": "Selesaikan: 1/4 + 1/2 = ?", "pilihan": ["2/6", "3/4", "2/4", "1/8"], "jawapan": 1, "penerangan": "1/4 + 2/4 = 3/4"}, {"soalan": "Selesaikan: 1/3 + 1/6 = ?", "pilihan": ["2/9", "3/6", "1/2", "1/9"], "jawapan": 2, "penerangan": "2/6 + 1/6 = 3/6 = 1/2"}, {"soalan": "Selesaikan: 1/5 + 3/10 = ?", "pilihan": ["4/15", "1/2", "4/10", "1/10"], "jawapan": 1, "penerangan": "2/10 + 3/10 = 5/10 = 1/2"}], [{"soalan": "Selesaikan: 5/7 + 3/7 = ?", "pilihan": ["8/14", "2/7", "8/7", "15/7"], "jawapan": 2, "penerangan": "(5+3)/7 = 8/7"}, {"soalan": "Selesaikan: 4/9 + 7/9 = ?", "pilihan": ["11/18", "3/9", "11/9", "28/9"], "jawapan": 2, "penerangan": "(4+7)/9 = 11/9"}, {"soalan": "Selesaikan: 3/5 + 4/5 = ?", "pilihan": ["7/10", "1/5", "7/5", "12/5"], "jawapan": 2, "penerangan": "(3+4)/5 = 7/5"}], [{"soalan": "Kira 20 - 11.765. Bundarkan jawapan kepada 2 titik perpuluhan.", "pilihan": ["8.24", "8.23", "8.25", "8.20"], "jawapan": 0, "penerangan": "8.235 bundar ke 8.24"}, {"soalan": "Kira 30 - 14.826. Bundarkan jawapan kepada 2 titik perpuluhan.", "pilihan": ["15.17", "15.18", "15.16", "15.20"], "jawapan": 0, "penerangan": "15.174 bundar ke 15.17"}, {"soalan": "Kira 50 - 22.348. Bundarkan jawapan kepada 2 titik perpuluhan.", "pilihan": ["27.65", "27.66", "27.64", "27.60"], "jawapan": 0, "penerangan": "27.652 bundar ke 27.65"}], [{"soalan": "Bundarkan 63.785 kepada persepuluh (1 t.p) terdekat.", "pilihan": ["63.7", "63.8", "63.79", "64.0"], "jawapan": 1, "penerangan": "8 >= 5, round up to 63.8"}, {"soalan": "Bundarkan 45.291 kepada persepuluh (1 t.p) terdekat.", "pilihan": ["45.2", "45.3", "45.29", "45.0"], "jawapan": 1, "penerangan": "9 >= 5, round up to 45.3"}, {"soalan": "Bundarkan 12.449 kepada persepuluh (1 t.p) terdekat.", "pilihan": ["12.5", "12.4", "12.45", "12.0"], "jawapan": 1, "penerangan": "4 < 5, keep 12.4"}], [{"soalan": "Kira: 1 1/4 - 1/2 = ?", "pilihan": ["3/4", "1/4", "1/2", "5/4"], "jawapan": 0, "penerangan": "5/4 - 2/4 = 3/4"}, {"soalan": "Kira: 1 1/3 - 2/3 = ?", "pilihan": ["2/3", "1/3", "4/3", "1"], "jawapan": 0, "penerangan": "4/3 - 2/3 = 2/3"}, {"soalan": "Kira: 1 1/5 - 3/5 = ?", "pilihan": ["4/5", "2/5", "1/5", "3/5"], "jawapan": 0, "penerangan": "6/5 - 3/5 = 3/5"}], [{"soalan": "Tentukan nilai digit '1' dalam nombor 85.174.", "pilihan": ["Satu", "Perpuluh", "Persepuluh (0.1)", "Perseratus"], "jawapan": 2, "penerangan": "1 berada di persepuluh."}, {"soalan": "Tentukan nilai digit '7' dalam nombor 85.174.", "pilihan": ["Persepuluh", "Sa", "Perseratus (0.01)", "Perseribu"], "jawapan": 2, "penerangan": "7 berada di perseratus."}, {"soalan": "Tentukan nilai digit '4' dalam nombor 85.174.", "pilihan": ["Perseratus", "Persepuluh", "Perseribu (0.001)", "Sa"], "jawapan": 2, "penerangan": "4 berada di perseribu."}], [{"soalan": "Kira 20 ÷ 0.275 = ? (Bundarkan 2 t.p)", "pilihan": ["72.73", "7.27", "727.27", "0.73"], "jawapan": 0, "penerangan": "72.7272..."}, {"soalan": "Kira 30 ÷ 0.425 = ? (Bundarkan 2 t.p)", "pilihan": ["70.59", "7.06", "705.88", "0.71"], "jawapan": 0, "penerangan": "70.588..."}, {"soalan": "Kira 15 ÷ 0.185 = ? (Bundarkan 2 t.p)", "pilihan": ["81.08", "8.11", "810.81", "0.81"], "jawapan": 0, "penerangan": "81.081..."}]], "Peratus": [[{"soalan": "Berapakah nilai 15% daripada 80 ha?", "pilihan": ["10 ha", "12 ha", "15 ha", "20 ha"], "jawapan": 1, "penerangan": "0.15 x 80 = 12"}, {"soalan": "Berapakah nilai 25% daripada 60 ha?", "pilihan": ["10 ha", "15 ha", "20 ha", "25 ha"], "jawapan": 1, "penerangan": "0.25 x 60 = 15"}, {"soalan": "Berapakah nilai 10% daripada 120 ha?", "pilihan": ["10 ha", "12 ha", "15 ha", "20 ha"], "jawapan": 1, "penerangan": "0.10 x 120 = 12"}], [{"soalan": "Jika 100% mewakili 40 orang, berapakah nilai 20%?", "pilihan": ["4 orang", "8 orang", "12 orang", "20 orang"], "jawapan": 1, "penerangan": "0.20 x 40 = 8"}, {"soalan": "Jika 100% mewakili 60 orang, berapakah nilai 30%?", "pilihan": ["10 orang", "18 orang", "20 orang", "24 orang"], "jawapan": 1, "penerangan": "0.30 x 60 = 18"}, {"soalan": "Jika 100% mewakili 80 orang, berapakah nilai 25%?", "pilihan": ["15 orang", "20 orang", "25 orang", "30 orang"], "jawapan": 1, "penerangan": "0.25 x 80 = 20"}], [{"soalan": "Berapakah 20% daripada 150?", "pilihan": ["20", "25", "30", "35"], "jawapan": 2, "penerangan": "0.20 x 150 = 30"}, {"soalan": "Berapakah 30% daripada 120?", "pilihan": ["30", "32", "36", "40"], "jawapan": 2, "penerangan": "0.30 x 120 = 36"}, {"soalan": "Berapakah 15% daripada 200?", "pilihan": ["20", "25", "30", "35"], "jawapan": 2, "penerangan": "0.15 x 200 = 30"}]], "Nisbah & Kadar": [[{"soalan": "Solanke, Benjamin dan Jusoh membahagi RM1800 mengikut nisbah 3:4:5. Kira bahagian Benjamin (nisbah 4).", "pilihan": ["RM 450", "RM 600", "RM 750", "RM 800"], "jawapan": 1, "penerangan": "4/12 x 1800 = 600"}, {"soalan": "Ali, Abu dan Ahmad membahagi RM2400 mengikut nisbah 2:3:5. Kira bahagian Abu (nisbah 3).", "pilihan": ["RM 480", "RM 720", "RM 1200", "RM 960"], "jawapan": 1, "penerangan": "3/10 x 2400 = 720"}, {"soalan": "Raju, Chong dan Muthu membahagi RM3000 mengikut nisbah 1:4:5. Kira bahagian Chong (nisbah 4).", "pilihan": ["RM 300", "RM 1200", "RM 1500", "RM 900"], "jawapan": 1, "penerangan": "4/10 x 3000 = 1200"}], [{"soalan": "Nisbah pasir kepada baja ialah 7:2. Berapa baja diperlukan jika 28 bungkus pasir digunakan?", "pilihan": ["4 bungkus", "6 bungkus", "8 bungkus", "14 bungkus"], "jawapan": 2, "penerangan": "28/7 = 4. 4 x 2 = 8"}, {"soalan": "Nisbah air kepada racun ialah 8:3. Berapa racun diperlukan jika 32 liter air digunakan?", "pilihan": ["8 liter", "10 liter", "12 liter", "16 liter"], "jawapan": 2, "penerangan": "32/8 = 4. 4 x 3 = 12"}, {"soalan": "Nisbah simen kepada pasir ialah 1:4. Berapa simen diperlukan jika 20 beg pasir digunakan?", "pilihan": ["3 beg", "4 beg", "5 beg", "10 beg"], "jawapan": 2, "penerangan": "20/4 = 5. 5 x 1 = 5"}], [{"soalan": "Jika 7 : m = 42 : 36, apakah nilai m?", "pilihan": ["5", "6", "7", "8"], "jawapan": 1, "penerangan": "42/7=6, 36/6=6"}, {"soalan": "Jika 5 : y = 35 : 28, apakah nilai y?", "pilihan": ["3", "4", "5", "6"], "jawapan": 1, "penerangan": "35/5=7, 28/7=4"}, {"soalan": "Jika 8 : k = 48 : 54, apakah nilai k?", "pilihan": ["7", "9", "10", "12"], "jawapan": 1, "penerangan": "48/8=6, 54/6=9"}], [{"soalan": "Kelas ada 15 murid perempuan dan 25 murid lelaki. Apakah nisbah murid perempuan kepada lelaki?", "pilihan": ["3:5", "5:3", "3:8", "15:40"], "jawapan": 0, "penerangan": "15/5 = 3, 25/5 = 5"}, {"soalan": "Di tapak semaian ada 20 pokok cengal dan 35 pokok meranti. Nisbah cengal kepada meranti ialah:", "pilihan": ["4:7", "7:4", "4:11", "2:3"], "jawapan": 0, "penerangan": "20/5 = 4, 35/5 = 7"}, {"soalan": "Dalam setor ada 18 cangkul dan 24 parang. Nisbah cangkul kepada parang ialah:", "pilihan": ["3:4", "4:3", "3:7", "2:3"], "jawapan": 0, "penerangan": "18/6 = 3, 24/6 = 4"}]], "Purata": [[{"soalan": "Cari purata bagi set nombor: 3, 9, 5, 1, 2.", "pilihan": ["4", "5", "6", "20"], "jawapan": 0, "penerangan": "20/5=4"}, {"soalan": "Cari purata bagi set nombor: 4, 8, 6, 2, 5.", "pilihan": ["5", "6", "7", "25"], "jawapan": 0, "penerangan": "25/5=5"}, {"soalan": "Cari purata bagi set nombor: 2, 7, 4, 8, 9.", "pilihan": ["6", "7", "8", "30"], "jawapan": 0, "penerangan": "30/5=6"}], [{"soalan": "Diberi purata bagi 5 nombor adalah 125. Cari jumlah kesemua nombor tersebut.", "pilihan": ["25", "125", "625", "750"], "jawapan": 2, "penerangan": "125 x 5 = 625"}, {"soalan": "Diberi purata bagi 4 nombor adalah 110. Cari jumlah kesemua nombor tersebut.", "pilihan": ["27", "110", "440", "550"], "jawapan": 2, "penerangan": "110 x 4 = 440"}, {"soalan": "Diberi purata bagi 6 nombor adalah 85. Cari jumlah kesemua nombor tersebut.", "pilihan": ["14", "85", "510", "600"], "jawapan": 2, "penerangan": "85 x 6 = 510"}], [{"soalan": "Luas 3 plot kajian ialah 1.39m², 1.5m² dan 2.03m². Kirakan luas purata 3 plot tersebut.", "pilihan": ["1.60 m²", "1.64 m²", "1.75 m²", "4.92 m²"], "jawapan": 1, "penerangan": "4.92/3 = 1.64"}, {"soalan": "Luas 3 plot kajian ialah 1.25m², 1.6m² dan 1.95m². Kirakan luas purata 3 plot tersebut.", "pilihan": ["1.50 m²", "1.60 m²", "1.70 m²", "4.80 m²"], "jawapan": 1, "penerangan": "4.80/3 = 1.60"}, {"soalan": "Luas 3 plot kajian ialah 2.15m², 2.4m² dan 2.65m². Kirakan luas purata 3 plot tersebut.", "pilihan": ["2.30 m²", "2.40 m²", "2.50 m²", "7.20 m²"], "jawapan": 1, "penerangan": "7.20/3 = 2.40"}]], "Luas & Perimeter": [[{"soalan": "Berapakah luas segitiga bersudut tegak yang tingginya 8 cm dan tapaknya 6 cm?", "pilihan": ["14 cm²", "48 cm²", "24 cm²", "28 cm²"], "jawapan": 2, "penerangan": "1/2 x 6 x 8 = 24"}, {"soalan": "Berapakah luas segitiga bersudut tegak yang tingginya 10 cm dan tapaknya 5 cm?", "pilihan": ["15 cm²", "50 cm²", "25 cm²", "30 cm²"], "jawapan": 2, "penerangan": "1/2 x 5 x 10 = 25"}, {"soalan": "Berapakah luas segitiga bersudut tegak yang tingginya 12 cm dan tapaknya 4 cm?", "pilihan": ["16 cm²", "48 cm²", "24 cm²", "32 cm²"], "jawapan": 2, "penerangan": "1/2 x 4 x 12 = 24"}], [{"soalan": "Apakah luas segiempat sama yang panjang sisinya 10 cm?", "pilihan": ["40 cm²", "100 cm²", "20 cm²", "1000 cm²"], "jawapan": 1, "penerangan": "10 x 10 = 100"}, {"soalan": "Apakah luas segiempat sama yang panjang sisinya 12 cm?", "pilihan": ["48 cm²", "144 cm²", "24 cm²", "120 cm²"], "jawapan": 1, "penerangan": "12 x 12 = 144"}, {"soalan": "Apakah luas segiempat sama yang panjang sisinya 15 cm?", "pilihan": ["60 cm²", "225 cm²", "30 cm²", "150 cm²"], "jawapan": 1, "penerangan": "15 x 15 = 225"}], [{"soalan": "Luas sebuah segiempat sama ialah 64 cm². Berapakah perimeternya?", "pilihan": ["16 cm", "24 cm", "32 cm", "64 cm"], "jawapan": 2, "penerangan": "sisi = 8. perimeter = 8 x 4 = 32"}, {"soalan": "Luas sebuah segiempat sama ialah 81 cm². Berapakah perimeternya?", "pilihan": ["18 cm", "27 cm", "36 cm", "81 cm"], "jawapan": 2, "penerangan": "sisi = 9. perimeter = 9 x 4 = 36"}, {"soalan": "Luas sebuah segiempat sama ialah 144 cm². Berapakah perimeternya?", "pilihan": ["24 cm", "36 cm", "48 cm", "144 cm"], "jawapan": 2, "penerangan": "sisi = 12. perimeter = 12 x 4 = 48"}]], "Isipadu 3D": [[{"soalan": "Hitung isipadu kuboid yang berukuran 4 cm, 10 cm, dan 6 cm.", "pilihan": ["240 cm³", "120 cm³", "20 cm³", "100 cm³"], "jawapan": 0, "penerangan": "4 x 10 x 6 = 240"}, {"soalan": "Hitung isipadu kuboid yang berukuran 5 cm, 8 cm, dan 4 cm.", "pilihan": ["160 cm³", "80 cm³", "17 cm³", "100 cm³"], "jawapan": 0, "penerangan": "5 x 8 x 4 = 160"}, {"soalan": "Hitung isipadu kuboid yang berukuran 3 cm, 12 cm, dan 5 cm.", "pilihan": ["180 cm³", "90 cm³", "20 cm³", "150 cm³"], "jawapan": 0, "penerangan": "3 x 12 x 5 = 180"}], [{"soalan": "Berapa isipadu kotak (46x18x18 cm) ditambah 2 kotak kecil (18x18x18 cm)?", "pilihan": ["14,904 cm³", "5,832 cm³", "26,568 cm³", "20,736 cm³"], "jawapan": 2, "penerangan": "(46x18x18) + 2(18x18x18) = 14904 + 11664 = 26568"}, {"soalan": "Berapa isipadu kotak (40x20x20 cm) ditambah 2 kotak kecil (20x20x20 cm)?", "pilihan": ["16,000 cm³", "8,000 cm³", "32,000 cm³", "24,000 cm³"], "jawapan": 2, "penerangan": "(40x20x20) + 2(20x20x20) = 16000 + 16000 = 32000"}, {"soalan": "Berapa isipadu kotak (50x15x15 cm) ditambah 2 kotak kecil (15x15x15 cm)?", "pilihan": ["11,250 cm³", "3,375 cm³", "18,000 cm³", "14,625 cm³"], "jawapan": 2, "penerangan": "(50x15x15) + 2(15x15x15) = 11250 + 6750 = 18000"}], [{"soalan": "Berapakah isipadu silinder jejari 23.4 cm, tinggi 80 cm? (π = 3.1416)", "pilihan": ["137,597 cm³", "13,759 cm³", "1,375 cm³", "137.6 cm³"], "jawapan": 0, "penerangan": "3.1416 x 23.4^2 x 80 = 137597.5"}, {"soalan": "Berapakah isipadu silinder jejari 15.5 cm, tinggi 60 cm? (π = 3.1416)", "pilihan": ["45,286 cm³", "4,528 cm³", "452 cm³", "45.2 cm³"], "jawapan": 0, "penerangan": "3.1416 x 15.5^2 x 60 = 45286.7"}, {"soalan": "Berapakah isipadu silinder jejari 12.2 cm, tinggi 50 cm? (π = 3.1416)", "pilihan": ["23,380 cm³", "2,338 cm³", "233 cm³", "23.3 cm³"], "jawapan": 0, "penerangan": "3.1416 x 12.2^2 x 50 = 23380.2"}], [{"soalan": "Isipadu kuboid panjang 22.8 cm, lebar 32.4 cm, tinggi 35.2 cm?", "pilihan": ["26,000 cm³", "26,003 cm³", "26,002.9 cm³", "26,003.5 cm³"], "jawapan": 2, "penerangan": "22.8 x 32.4 x 35.2 = 26002.944"}, {"soalan": "Isipadu kuboid panjang 18.5 cm, lebar 24.2 cm, tinggi 30.6 cm?", "pilihan": ["13,700 cm³", "13,703 cm³", "13,700.5 cm³", "13,702.5 cm³"], "jawapan": 2, "penerangan": "18.5 x 24.2 x 30.6 = 13700.52"}, {"soalan": "Isipadu kuboid panjang 15.4 cm, lebar 20.5 cm, tinggi 28.8 cm?", "pilihan": ["9,000 cm³", "9,092 cm³", "9,092.1 cm³", "9,092.2 cm³"], "jawapan": 2, "penerangan": "15.4 x 20.5 x 28.8 = 9092.16"}]], "Trigonometri": [[{"soalan": "Segitiga tegak: sisi setentang 16cm, sebelah 12cm. Kira sudut θ.", "pilihan": ["36.87°", "53.13°", "45.0°", "60.0°"], "jawapan": 1, "penerangan": "Tan = 16/12 = 1.33, atan(1.33) = 53.13"}, {"soalan": "Segitiga tegak: sisi setentang 20cm, sebelah 15cm. Kira sudut θ.", "pilihan": ["36.87°", "53.13°", "45.0°", "60.0°"], "jawapan": 1, "penerangan": "Tan = 20/15 = 1.33, atan = 53.13"}, {"soalan": "Segitiga tegak: sisi setentang 24cm, sebelah 18cm. Kira sudut θ.", "pilihan": ["36.87°", "53.13°", "45.0°", "60.0°"], "jawapan": 1, "penerangan": "Tan = 24/18 = 1.33, atan = 53.13"}], [{"soalan": "Segitiga sudut 30°, sisi condong (hipotenus) = 30cm. Cari panjang setentang.", "pilihan": ["15 cm", "30 cm", "25 cm", "45 cm"], "jawapan": 0, "penerangan": "sin 30 = 0.5. 0.5 x 30 = 15"}, {"soalan": "Segitiga sudut 30°, sisi condong (hipotenus) = 40cm. Cari panjang setentang.", "pilihan": ["20 cm", "40 cm", "30 cm", "50 cm"], "jawapan": 0, "penerangan": "sin 30 = 0.5. 0.5 x 40 = 20"}, {"soalan": "Segitiga sudut 30°, sisi condong (hipotenus) = 50cm. Cari panjang setentang.", "pilihan": ["25 cm", "50 cm", "35 cm", "60 cm"], "jawapan": 0, "penerangan": "sin 30 = 0.5. 0.5 x 50 = 25"}], [{"soalan": "Dalam segitiga DEF bersudut tegak di E. Tentukan Hipotenus.", "pilihan": ["DE", "EF", "DF", "Tidak dapat ditentukan"], "jawapan": 2, "penerangan": "Sisi bertentang 90 darjah ialah DF."}, {"soalan": "Dalam segitiga PQR bersudut tegak di Q. Tentukan Hipotenus.", "pilihan": ["PQ", "QR", "PR", "Tidak dapat ditentukan"], "jawapan": 2, "penerangan": "Sisi bertentang 90 darjah ialah PR."}, {"soalan": "Dalam segitiga ABC bersudut tegak di B. Tentukan Hipotenus.", "pilihan": ["AB", "BC", "AC", "Tidak dapat ditentukan"], "jawapan": 2, "penerangan": "Sisi bertentang 90 darjah ialah AC."}]]};
+    
+    // Peraturan agihan soalan (mesti genap 20)
+    const agihanTopik = {
+        "Asas & Penukaran Unit": 2,
+        "Pecahan & Perpuluhan": 3,
+        "Peratus": 2,
+        "Nisbah & Kadar": 3,
+        "Purata": 2,
+        "Luas & Perimeter": 2,
+        "Isipadu 3D": 3,
+        "Trigonometri": 3
+    };
+
+    let quizSet = [];
+    let curIdx = 0;
+    let masaBerbaki = 1800; // 30 minit
+    let timerInterval;
+    let selectedReal = null;
+    let skorAkhir = 0;
+    let nama = "", noId = "";
+    const appsScriptURL = "https://script.google.com/macros/s/AKfycbwCJ1_jGHLV3knMCiVgDdm328KonQdQtWrQHNOj4JJXj6nXwgBAkbeYTwe760nvRcUBXg/exec";
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    function mulaUjian() {
+        nama = document.getElementById('input-nama').value.trim();
+        noId = document.getElementById('input-id').value.trim();
+        
+
+        if(!nama || !noId) { alert("Sila isi Nama dan Nombor Badan."); return; }
+
+        // Penjanaan 20 soalan seimbang bab & rawak angka (Anti-Tiru)
+        quizSet = [];
+        for (const [topik, jumlahPerlu] of Object.entries(agihanTopik)) {
+            // Ambil semua kumpulan (groups) dalam topik ini
+            let groups = [...bankKategori[topik]];
+            // Kocak susunan group
+            groups.sort(() => Math.random() - 0.5);
+            
+            // Pilih N kumpulan pertama
+            let selectedGroups = groups.slice(0, jumlahPerlu);
+            
+            // Dari setiap kumpulan yang dipilih, cabut 1 variasi rawak
+            selectedGroups.forEach(grp => {
+                let randomVariation = grp[Math.floor(Math.random() * grp.length)];
+                // Masukkan nama topik ke dalam objek soalan
+                randomVariation.topikAsal = topik;
+                quizSet.push(randomVariation);
+            });
+        }
+
+        // Kocak susunan 20 soalan yang telah dicabut tadi
+        quizSet.sort(() => Math.random() - 0.5);
+
+        curIdx = 0; skorAkhir = 0;
+        
+        document.getElementById('bar-nama').innerText = nama.split(' ')[0] + " (" + noId + ")";
+        showScreen('screen-quiz');
+        renderSoalan();
+        mulakanTimer();
+    }
+    
+    function mulakanTimer() {
+        masaBerbaki = 30 * 60; // 30 minit x 60 saat
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            masaBerbaki--;
+            let min = Math.floor(masaBerbaki / 60);
+            let sec = masaBerbaki % 60;
+            document.getElementById('q-timer').innerText = (min < 10 ? "0" + min : min) + ":" + (sec < 10 ? "0" + sec : sec);
+            
+            if (masaBerbaki <= 180) {
+                // Merah berkelip bila tinggal 3 minit
+                document.getElementById('q-timer').style.background = "#fca5a5";
+                document.getElementById('q-timer').style.color = "#991b1b";
+            }
+            
+            if (masaBerbaki <= 0) {
+                clearInterval(timerInterval);
+                alert("⏳ Masa 30 Minit Telah Tamat!\nUjian anda ditutup dan dibawa ke skrin markah.");
+                tunjukKeputusan();
+            }
+        }, 1000);
+    }
+
+    function renderSoalan() {
+        const q = quizSet[curIdx];
+        document.getElementById('q-counter').innerText = (curIdx + 1) + "/" + quizSet.length;
+        document.getElementById('q-topik').innerText = q.topikAsal;
+        document.getElementById('q-text').innerText = (curIdx + 1) + ". " + q.soalan;
+
+        // Kocak (shuffle) pilihan jawapan ABCD
+        const opts = q.pilihan.map((t, i) => ({t, i})).sort(() => Math.random() - 0.5);
+        const box = document.getElementById('pilihan-box');
+        box.innerHTML = '';
+        selectedReal = null;
+        document.getElementById('btn-next').disabled = true;
+
+        opts.forEach((o, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'pilihan-btn';
+            btn.innerHTML = `<span class="pilihan-opt-badge">${String.fromCharCode(65+idx)}</span> <span>${o.t}</span>`;
+            btn.onclick = () => {
+                document.querySelectorAll('.pilihan-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedReal = o.i;
+                document.getElementById('btn-next').disabled = false;
+            };
+            box.appendChild(btn);
+        });
+        
+        document.getElementById('btn-next').innerText = curIdx === quizSet.length - 1 ? "HANTAR JAWAPAN ✓" : "SETERUSNYA ➔";
+    }
+
+    function jawabSeterusnya() {
+        if(selectedReal === null) return;
+        
+        quizSet[curIdx].userSelectedRealIndex = selectedReal; // Simpan untuk semakan
+        
+        if (selectedReal === quizSet[curIdx].jawapan) {
+            skorAkhir++;
+        }
+        
+        curIdx++;
+        if(curIdx < quizSet.length) {
+            renderSoalan();
+            document.querySelector('.main-screen').scrollTo({top: 0, behavior: 'smooth'});
+        }
+        else {
+            tunjukKeputusan();
+        }
+    }
+
+    function tunjukKeputusan() {
+        clearInterval(timerInterval); // Hentikan timer
+        const total = quizSet.length;
+        const pct = Math.round((skorAkhir / total) * 100);
+
+        document.getElementById('res-pelatih-info').innerText = `${nama} (No: ${noId})`;
+        document.getElementById('res-score').innerText = `${skorAkhir} / ${total}`;
+        document.getElementById('res-pct').innerText = `${pct}%`;
+
+        // Bina semula Logik Semakan Jawapan
+        const rev = document.getElementById('review-container');
+        rev.innerHTML = '<h3 style="margin:16px 0 10px; font-size:16px; color:#334155;">Semakan Jawapan & Jalan Kira:</h3>';
+        
+        quizSet.forEach((q, i) => {
+            const userChoiceRealIndex = q.userSelectedRealIndex;
+            const isCorrect = userChoiceRealIndex === q.jawapan;
+            
+            // Get string representation of user's choice and correct choice
+            const ansStr = (userChoiceRealIndex !== null && userChoiceRealIndex !== undefined) ? q.pilihan[userChoiceRealIndex] : "Tiada Jawapan (Masa Tamat)";
+            const correctStr = q.pilihan[q.jawapan];
+
+            rev.innerHTML += `
+                <div class="review-item ${isCorrect ? 'correct' : 'wrong'}">
+                    <div style="font-weight:bold; margin-bottom:6px; font-size:15px;">${i+1}. ${q.soalan}</div>
+                    <div style="font-size:14px; margin-bottom:4px;">Jawapan Anda: <b>${ansStr}</b> ${isCorrect ? '✅' : '❌'}</div>
+                    ${!isCorrect ? `<div style="font-size:14px; color:#15803d; margin-bottom:4px;">Jawapan Sebenar: <b>${correctStr}</b></div>` : ''}
+                    <div style="font-size:13px; background:#fff; padding:8px; margin-top:8px; border-radius:6px; color:#475569; border: 1px dashed #cbd5e1;">💡 <b>Jalan Kira:</b> ${q.penerangan}</div>
+                </div>
+            `;
+        });
+
+        showScreen('screen-result');
+    }
+
+    function hantarDataKeSheet() {
+        document.getElementById('loader').style.display = 'flex';
+        document.getElementById('loader-text').innerText = "Menghantar keputusan...";
+
+        const finalUrl = appsScriptURL + "?nama=" + encodeURIComponent(nama) + "&nombadan=" + encodeURIComponent(noId) + "&skor=" + encodeURIComponent(skorAkhir + " / 20");
+        
+        fetch(finalUrl, {
+            method: 'GET',
+            mode: 'no-cors'
+        })
+        .then(response => {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('display-nama').innerText = nama;
+            showScreen('screen-success');
+        })
+        .catch(error => {
+            document.getElementById('loader').style.display = 'none';
+            alert("Ralat penghantaran! Sila semak sambungan internet anda.\n\nInfo: " + error);
+        });
+    }
+
+    function tunjukSemakan() {
+        const box = document.getElementById('review-container');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+</body>
+</html>
